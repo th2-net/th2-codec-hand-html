@@ -16,6 +16,11 @@ import com.exactpro.th2.common.schema.message.configuration.Configuration;
 import lombok.Getter;
 import lombok.Setter;
 
+/*
+    When classes name says thousand words
+    comment is redundant, but whatever
+ */
+
 @Getter
 @Setter
 public class FixHtmlParserConfiguration implements Configuration {
