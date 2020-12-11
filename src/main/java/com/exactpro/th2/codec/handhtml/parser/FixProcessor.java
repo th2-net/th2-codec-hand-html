@@ -25,6 +25,12 @@ import org.jsoup.nodes.Element;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/*
+    Following class does html parsing and
+    message generation, logic might split into
+    two different classes in near future
+ */
+
 @Slf4j
 public class FixProcessor {
 
@@ -66,6 +72,11 @@ public class FixProcessor {
         return generateMessage(messageType, rawMessage.getMetadata(), jsonMap, subMessage);
     }
 
+    /*
+        Following method produces main message,
+        which process method returns
+     */
+
     private Message generateMessage (String messageType, RawMessageMetadata rawMessageMetadata, Map <String, String> fields, Message subMessage) {
         Message.Builder builder = Message.newBuilder();
 
@@ -88,9 +99,20 @@ public class FixProcessor {
         return builder.build();
     }
 
+    /*
+        Generates subMessage, which contains
+        actual fields and hierarchy from html table
+     */
+
     private Message generateSubMessage (Map <String, Object> fields) {
         return buildParsedMessage(fields).build();
+
     }
+
+    /*
+        Parses html table and constructs Map
+        hierarchy from it
+     */
 
     private Map<String, Object> parse(Element table) {
         Element tableBody = table.child(1);
@@ -103,11 +125,15 @@ public class FixProcessor {
 
             Element fieldName = row.child(0);
 
+            // Indicator that internal fields will be coming
             if (row.childrenSize() == 1) {
                 curDepth = Integer.parseInt(fieldName.child(0).attr(configuration.getHierarchyAttribute())
                         .split(configuration.getHierarchyIndicatorPrefix())[1]
                         .split(configuration.getHierarchyIndicatorSuffix())[0]);
 
+                /*
+                    Pop maps from stack, because their fields are over
+                 */
                 while (curDepth < prevDepth) {
                     stack.pop();
                     prevDepth -= configuration.getHierarchyStep();
@@ -115,6 +141,10 @@ public class FixProcessor {
                 prevDepth = curDepth;
 
 
+                /*
+                    Creation of hierarchy's new layer
+                    and adding it as one of the fields of last Map
+                 */
                 Map<String, Object> childHMap = new HashMap<>();
                 stack.peek().put(fieldName.text(), childHMap);
 
@@ -126,16 +156,27 @@ public class FixProcessor {
                     .split(configuration.getHierarchyIndicatorPrefix())[1]
                     .split(configuration.getHierarchyIndicatorSuffix())[0]);
 
+            /*
+                Same logic as above
+             */
             while (curDepth < prevDepth) {
                 stack.pop();
                 prevDepth -= configuration.getHierarchyStep();
             }
             prevDepth = curDepth;
 
+            /*
+                At this point it's guaranteed that
+                we are putting non-complex value
+             */
             Element fieldValue = row.child(1);
             stack.peek().put(fieldName.text(), fieldValue.text());
         }
 
+
+        /*
+            The first map will be the root Map
+         */
         while (stack.size() > 1) {
             stack.pop();
         }
@@ -185,6 +226,11 @@ public class FixProcessor {
         }
     }
 
+    /*
+        Simple function to check whether a map
+        can be converted into list
+     */
+
     private boolean hasSequentialElements (Set<String> set) {
         List<String> ls = set.stream().sorted().collect(Collectors.toList());
         if (ls.size() == 0) {
@@ -203,6 +249,12 @@ public class FixProcessor {
 
         return true;
     }
+
+    /*
+        Recursive function, which converts
+        any list-like (keys are consecutive numbers starting with 0)
+        map into list and setts it into parent
+     */
 
     private Object adjustCollections (Map <String, Object> map) {
         List <Pair <String, Object> > updatedEntries = new ArrayList<>();
