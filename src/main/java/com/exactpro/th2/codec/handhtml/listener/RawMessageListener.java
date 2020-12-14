@@ -21,13 +21,8 @@ import com.exactpro.th2.common.schema.message.MessageRouter;
 import lombok.extern.slf4j.Slf4j;
 
 /*
-    Listener receives RawMessages, uses FixProcessor and
-    sends generated messages via MessageRouter
- */
-
-/*
-    Listener receives RawMessages, uses FixProcessor and
-    sends generated messages via MessageRouter
+    Listener receives RawMessages, uses FixDecoder and
+    sends generated MessageBatch via MessageRouter
  */
 
 @Slf4j
