@@ -25,6 +25,11 @@ import lombok.extern.slf4j.Slf4j;
     sends generated messages via MessageRouter
  */
 
+/*
+    Listener receives RawMessages, uses FixProcessor and
+    sends generated messages via MessageRouter
+ */
+
 @Slf4j
 public class RawMessageListener implements MessageListener<RawMessageBatch> {
 
