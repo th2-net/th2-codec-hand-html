@@ -14,8 +14,8 @@
 package com.exactpro.th2.codec.handhtml.processor;
 
 import com.exactpro.sf.common.util.Pair;
-import com.exactpro.th2.common.grpc.*;
 import com.exactpro.th2.codec.handhtml.util.HtmlUtils;
+import com.exactpro.th2.common.grpc.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
@@ -59,14 +59,12 @@ public class FixProcessor {
         String messageType = messageTypeElement == null ? "Undefined" : messageTypeElement.text();
 
         if (table == null) {
-            log.error ("Could not find table in raw message");
             throw new Exception("Could not find table in raw message");
         }
 
         Map<String, Object> fieldMap = HtmlUtils.parse(table, configuration);
 
         if (fieldMap == null) {
-            log.error("Parser could not process html data");
             throw new Exception("Could not parse the html data");
         }
 
@@ -76,7 +74,6 @@ public class FixProcessor {
         Message subMessage = generateSubMessage(fieldMap);
 
         if (subMessage == null) {
-            log.error("Processor could not process the hierarchy");
             throw new Exception("Processor could not process the hierarchy");
         }
 
