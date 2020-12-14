@@ -11,7 +11,7 @@
  limitations under the License.
  */
 
-package com.exactpro.th2.codec.handhtml.parser;
+package com.exactpro.th2.codec.handhtml.processor;
 
 import com.exactpro.sf.common.util.Pair;
 import com.exactpro.th2.common.grpc.*;
@@ -26,18 +26,23 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /*
-    Following class does html parsing and
-    message generation, logic might split into
-    two different classes in near future
+    Following class does RawMessage processing
+    and Message generation
  */
 
 @Slf4j
 public class FixProcessor {
+    private final FixHtmlProcessorConfiguration configuration;
 
-    private FixHtmlParserConfiguration configuration;
+    private final HtmlUtils.TagNameChecker tableChecker;
+    private final HtmlUtils.ClassNameChecker messageTypeChecker;
 
-    public FixProcessor (FixHtmlParserConfiguration configuration) {
+    public FixProcessor (FixHtmlProcessorConfiguration configuration) {
         this.configuration = configuration;
+
+        this.tableChecker = new HtmlUtils.TagNameChecker("table");
+        this.messageTypeChecker = new HtmlUtils.ClassNameChecker(configuration.getMessageTypeElClassName());
+
     }
 
     public Message process (RawMessage rawMessage) throws Exception {
@@ -49,17 +54,23 @@ public class FixProcessor {
 
         Document document = Jsoup.parse(jsonMap.get(configuration.getContentKey()));
 
-        Element table = HtmlUtils.findChildTable(document);
-        Element messageTypeElement = HtmlUtils.findChildWithClass(document, configuration.getMessageTypeElClassName());
+        Element table = HtmlUtils.traverseSubtree(document, tableChecker);
+        Element messageTypeElement = HtmlUtils.traverseSubtree(document, messageTypeChecker);
         String messageType = messageTypeElement == null ? "Undefined" : messageTypeElement.text();
 
-        Map<String, Object> fieldMap = parse(table);
+        if (table == null) {
+            log.error ("Could not find table in raw message");
+            throw new Exception("Could not find table in raw message");
+        }
+
+        Map<String, Object> fieldMap = HtmlUtils.parse(table, configuration);
 
         if (fieldMap == null) {
             log.error("Parser could not process html data");
             throw new Exception("Could not parse the html data");
         }
 
+        //TODO: Use Dictionary for this purpose
         fieldMap = (Map) adjustCollections(fieldMap);
 
         Message subMessage = generateSubMessage(fieldMap);
@@ -107,81 +118,6 @@ public class FixProcessor {
     private Message generateSubMessage (Map <String, Object> fields) {
         return buildParsedMessage(fields).build();
 
-    }
-
-    /*
-        Parses html table and constructs Map
-        hierarchy from it
-     */
-
-    private Map<String, Object> parse(Element table) {
-        Element tableBody = table.child(1);
-
-        Stack<Map<String, Object>> stack = new Stack<>();
-        stack.add(new HashMap<>());
-
-        int prevDepth = configuration.getHierarchyStart(), curDepth = configuration.getHierarchyStart();
-        for (Element row : tableBody.children()) {
-
-            Element fieldName = row.child(0);
-
-            // Indicator that internal fields will be coming
-            if (row.childrenSize() == 1) {
-                curDepth = Integer.parseInt(fieldName.child(0).attr(configuration.getHierarchyAttribute())
-                        .split(configuration.getHierarchyIndicatorPrefix())[1]
-                        .split(configuration.getHierarchyIndicatorSuffix())[0]);
-
-                /*
-                    Pop maps from stack, because their fields are over
-                 */
-                while (curDepth < prevDepth) {
-                    stack.pop();
-                    prevDepth -= configuration.getHierarchyStep();
-                }
-                prevDepth = curDepth;
-
-
-                /*
-                    Creation of hierarchy's new layer
-                    and adding it as one of the fields of last Map
-                 */
-                Map<String, Object> childHMap = new HashMap<>();
-                stack.peek().put(fieldName.text(), childHMap);
-
-                stack.add(childHMap);
-                continue;
-            }
-
-            curDepth = Integer.parseInt(fieldName.attr(configuration.getHierarchyAttribute())
-                    .split(configuration.getHierarchyIndicatorPrefix())[1]
-                    .split(configuration.getHierarchyIndicatorSuffix())[0]);
-
-            /*
-                Same logic as above
-             */
-            while (curDepth < prevDepth) {
-                stack.pop();
-                prevDepth -= configuration.getHierarchyStep();
-            }
-            prevDepth = curDepth;
-
-            /*
-                At this point it's guaranteed that
-                we are putting non-complex value
-             */
-            Element fieldValue = row.child(1);
-            stack.peek().put(fieldName.text(), fieldValue.text());
-        }
-
-
-        /*
-            The first map will be the root Map
-         */
-        while (stack.size() > 1) {
-            stack.pop();
-        }
-
-        return stack.peek();
     }
 
     private Message.Builder buildParsedMessage(Map<String, Object> fields) {

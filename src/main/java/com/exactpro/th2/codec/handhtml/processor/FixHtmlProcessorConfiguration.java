@@ -10,7 +10,7 @@
  See the License for the specific language governing permissions and
  limitations under the License.
  */
-package com.exactpro.th2.codec.handhtml.parser;
+package com.exactpro.th2.codec.handhtml.processor;
 
 import com.exactpro.th2.common.schema.message.configuration.Configuration;
 import lombok.Getter;
@@ -23,7 +23,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class FixHtmlParserConfiguration implements Configuration {
+public class FixHtmlProcessorConfiguration implements Configuration {
     private String messageTypeElClassName = "table-header";
     private String contentKey = "Text out";
     private int hierarchyStart = 10;
