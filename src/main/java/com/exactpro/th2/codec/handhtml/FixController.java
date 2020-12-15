@@ -13,10 +13,11 @@
 
 package com.exactpro.th2.codec.handhtml;
 
+import com.exactpro.th2.codec.handhtml.decoder.FixDecoder;
 import com.exactpro.th2.codec.handhtml.listener.RawMessageListener;
 import com.exactpro.th2.common.schema.factory.CommonFactory;
-import com.exactpro.th2.codec.handhtml.parser.FixHtmlParserConfiguration;
-import com.exactpro.th2.codec.handhtml.parser.FixProcessor;
+import com.exactpro.th2.codec.handhtml.processor.FixHtmlProcessorConfiguration;
+import com.exactpro.th2.codec.handhtml.processor.FixProcessor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
@@ -52,10 +53,11 @@ public class FixController {
             configureShutdownHook(lock, condition);
             setReadiness(true);
 
-            FixHtmlParserConfiguration fixHtmlParserConfiguration = factory.getCustomConfiguration(FixHtmlParserConfiguration.class);
-            FixProcessor fixProcessor = new FixProcessor(fixHtmlParserConfiguration);
+            FixHtmlProcessorConfiguration fixHtmlProcessorConfiguration = factory.getCustomConfiguration(FixHtmlProcessorConfiguration.class);
+            FixProcessor fixProcessor = new FixProcessor(fixHtmlProcessorConfiguration);
 
-            RawMessageListener rawMessageListener = new RawMessageListener(parsedBatchRouter, fixProcessor);
+            FixDecoder fixDecoder = new FixDecoder(fixProcessor);
+            RawMessageListener rawMessageListener = new RawMessageListener(parsedBatchRouter, fixDecoder);
             rawBatchRouter.subscribeAll(rawMessageListener);
 
             awaitShutdown(lock, condition);

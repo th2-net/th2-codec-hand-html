@@ -13,19 +13,100 @@
 package com.exactpro.th2.codec.handhtml.util;
 
 
+import com.exactpro.th2.codec.handhtml.processor.FixHtmlProcessorConfiguration;
 import org.jsoup.nodes.Element;
+
+import java.util.*;
 
 public class HtmlUtils {
 
-    //TODO: pass function to traversal method
+    /*
+        Parses html table and constructs
+        multi-layer map hierarchy from it
+    */
 
-    public static Element findChildTable (Element node) {
-        if (node.tagName().equals("table")) {
+    public static Map<String, Object> parse(Element table, FixHtmlProcessorConfiguration configuration) {
+        Element tableBody = table.child(1);
+
+        Stack<Map<String, Object>> stack = new Stack<>();
+        stack.add(new HashMap<>());
+
+        int prevDepth = configuration.getHierarchyStart(), curDepth;
+        for (Element row : tableBody.children()) {
+
+            Element fieldName = row.child(0);
+
+            // Indicator that internal fields will be coming
+            if (row.childrenSize() == 1) {
+                curDepth = Integer.parseInt(fieldName.child(0).attr(configuration.getHierarchyAttribute())
+                        .split(configuration.getHierarchyIndicatorPrefix())[1]
+                        .split(configuration.getHierarchyIndicatorSuffix())[0]);
+
+                /*
+                    Pop maps from stack, because their fields are over
+                 */
+                while (curDepth < prevDepth) {
+                    stack.pop();
+                    prevDepth -= configuration.getHierarchyStep();
+                }
+                prevDepth = curDepth;
+
+
+                /*
+                    Creation of hierarchy's new layer
+                    and adding it as one of the fields of last Map
+                 */
+                Map<String, Object> childHMap = new HashMap<>();
+                stack.peek().put(fieldName.text(), childHMap);
+
+                stack.add(childHMap);
+                continue;
+            }
+
+            curDepth = Integer.parseInt(fieldName.attr(configuration.getHierarchyAttribute())
+                    .split(configuration.getHierarchyIndicatorPrefix())[1]
+                    .split(configuration.getHierarchyIndicatorSuffix())[0]);
+
+            /*
+                Same logic as above
+             */
+            while (curDepth < prevDepth) {
+                stack.pop();
+                prevDepth -= configuration.getHierarchyStep();
+            }
+            prevDepth = curDepth;
+
+            /*
+                At this point it's guaranteed that
+                we are putting non-complex value
+             */
+            Element fieldValue = row.child(1);
+            stack.peek().put(fieldName.text(), fieldValue.text());
+        }
+
+
+        /*
+            The first map will be the root Map
+         */
+        while (stack.size() > 1) {
+            stack.pop();
+        }
+
+        return stack.peek();
+    }
+
+    /*
+        Function which traverses and finds
+        node with given criteria
+     */
+
+    public static Element traverseSubtree (Element node, CriteriaChecker criteriaChecker) {
+        if (criteriaChecker.checkCriteria(node)) {
             return node;
         }
 
         for (Element child : node.children()) {
-            Element subTreeAns = findChildTable(child);
+            Element subTreeAns = traverseSubtree(child, criteriaChecker);
 
             if (subTreeAns != null) {
                 return subTreeAns;
@@ -35,19 +116,39 @@ public class HtmlUtils {
         return null;
     }
 
-    public static Element findChildWithClass (Element node, String className) {
-        if (node.className().equals(className)) {
-            return node;
+    /*
+        Classes which implement this interface
+        will be passed to node traversal function
+        to return node with desired specifications
+     */
+
+    public interface CriteriaChecker {
+        boolean checkCriteria (Element node);
+    }
+
+    public static class TagNameChecker implements CriteriaChecker {
+        private final String tagName;
+
+        public TagNameChecker (String... criteria) {
+            this.tagName = Arrays.stream(criteria).findFirst().get();
         }
 
-        for (Element child : node.children()) {
-            Element subTreeAns = findChildWithClass(child, className);
+        @Override
+        public boolean checkCriteria(Element node) {
+            return node.tagName().equals(tagName);
+        }
+    }
 
-            if (subTreeAns != null) {
-                return subTreeAns;
-            }
+    public static class ClassNameChecker implements CriteriaChecker {
+        private final String className;
+
+        public ClassNameChecker (String... criteria) {
+            this.className = Arrays.stream(criteria).findFirst().get();
         }
 
-        return null;
+        @Override
+        public boolean checkCriteria(Element node) {
+            return node.className().equals(className);
+        }
     }
 }

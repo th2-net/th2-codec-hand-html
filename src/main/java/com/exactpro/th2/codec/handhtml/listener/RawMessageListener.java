@@ -13,52 +13,36 @@
 
 package com.exactpro.th2.codec.handhtml.listener;
 
-import com.exactpro.th2.common.grpc.Message;
+import com.exactpro.th2.codec.handhtml.decoder.FixDecoder;
 import com.exactpro.th2.common.grpc.MessageBatch;
 import com.exactpro.th2.common.grpc.RawMessageBatch;
 import com.exactpro.th2.common.schema.message.MessageListener;
 import com.exactpro.th2.common.schema.message.MessageRouter;
-import com.exactpro.th2.codec.handhtml.parser.FixProcessor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /*
-    Listener receives RawMessages, uses FixProcessor and
-    sends generated messages via MessageRouter
+    Listener receives RawMessages, uses FixDecoder and
+    sends generated MessageBatch via MessageRouter
  */
 
 @Slf4j
 public class RawMessageListener implements MessageListener<RawMessageBatch> {
 
     private MessageRouter<MessageBatch> batchMessageRouter;
-    private FixProcessor fixProcessor;
+    private FixDecoder fixDecoder;
 
-    public RawMessageListener (MessageRouter<MessageBatch> batchMessageRouter, FixProcessor fixProcessor) {
+    public RawMessageListener (MessageRouter<MessageBatch> batchMessageRouter, FixDecoder fixDecoder) {
         this.batchMessageRouter = batchMessageRouter;
-        this.fixProcessor = fixProcessor;
+        this.fixDecoder = fixDecoder;
     }
 
     @Override
     public void handler(String consumerTag, RawMessageBatch message) {
 
         try {
-            List<Message> parsedMessages = new ArrayList<>();
-
-            for (var msg : message.getMessagesList()) {
-                try {
-                    Message m = fixProcessor.process(msg);
-                    parsedMessages.add(m);
-                } catch (Exception e) {
-                    log.error("Exception parsing message", e);
-                }
-            }
-
-            log.info("Sending processed message");
-            batchMessageRouter.send(MessageBatch.newBuilder().addAllMessages(parsedMessages).build());
+            batchMessageRouter.send(fixDecoder.decode(message));
         } catch (Exception e) {
-            log.error("Exception processing message(s)", e);
+            log.error("Exception sending message(s)", e);
         }
     }
 
