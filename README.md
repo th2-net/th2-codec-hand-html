@@ -1,15 +1,15 @@
 # Codec for HTML Fix structure
 
-##Introduction
+## Introduction
 
 **th2-codec-hand-html** is responsible for receiving *RawMessages* via RabbitMQ, which contains Fix structure
 provided in a HTML table format, parsing and processing it, generating *Message* and then sending it via RabbitMQ.
 
-#####Caveats
+##### Caveats
 Hierarchy described below is an arbitrary concept for a HTML table, enough information should be supplemented with a configuration, so that a multi-layer map like structure can be constructed from the flat HTML table.
 
-##Quick Start
-####Configuration
+## Quick Start
+#### Configuration
 Config which should be provided is defined as *FixHtmlProcessorConfiguration* and looks like this:
 ```
 {
