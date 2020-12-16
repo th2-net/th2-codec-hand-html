@@ -14,6 +14,7 @@
 package com.exactpro.th2.codec.handhtml.listener;
 
 import com.exactpro.th2.codec.handhtml.decoder.FixDecoder;
+import com.exactpro.th2.common.grpc.Message;
 import com.exactpro.th2.common.grpc.MessageBatch;
 import com.exactpro.th2.common.grpc.RawMessageBatch;
 import com.exactpro.th2.common.schema.message.MessageListener;
@@ -40,6 +41,13 @@ public class RawMessageListener implements MessageListener<RawMessageBatch> {
     public void handler(String consumerTag, RawMessageBatch message) {
 
         try {
+            MessageBatch messageBatch = fixDecoder.decode(message);
+
+            if (messageBatch.getMessagesCount() == 0) {
+                log.info("Valid messages weren't found in this batch, router won't send anything");
+                return;
+            }
+
             batchMessageRouter.send(fixDecoder.decode(message));
         } catch (Exception e) {
             log.error("Exception sending message(s)", e);
