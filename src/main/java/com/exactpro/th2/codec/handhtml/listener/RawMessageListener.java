@@ -48,7 +48,7 @@ public class RawMessageListener implements MessageListener<RawMessageBatch> {
                 return;
             }
 
-            batchMessageRouter.send(fixDecoder.decode(message));
+            batchMessageRouter.sendAll(messageBatch);
         } catch (Exception e) {
             log.error("Exception sending message(s)", e);
         }
