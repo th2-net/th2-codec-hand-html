@@ -6,7 +6,7 @@ RUN gradle build -Prelease_version=${app_version}
 RUN mkdir /home/app
 RUN cp ./build/libs/*.jar /home/app/application.jar
 
-FROM openjdk:12-alpine
+FROM adoptopenjdk/openjdk11:alpine
 COPY --from=build /home/app /home/app
 
 WORKDIR /home/app/
