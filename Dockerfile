@@ -1,7 +1,7 @@
 FROM gradle:6.6-jdk11 AS build
-ARG app_version=0.0.0
+ARG release_version
 COPY ./ .
-RUN gradle build -Prelease_version=${app_version}
+RUN gradle build -Prelease_version=${release_version}
 
 RUN mkdir /home/app
 RUN cp ./build/libs/*.jar /home/app/application.jar
