@@ -14,9 +14,7 @@
 package com.exactpro.th2.codec.handhtml.listener;
 
 import com.exactpro.th2.codec.handhtml.decoder.FixDecoder;
-import com.exactpro.th2.common.grpc.Message;
-import com.exactpro.th2.common.grpc.MessageBatch;
-import com.exactpro.th2.common.grpc.RawMessageBatch;
+import com.exactpro.th2.common.grpc.*;
 import com.exactpro.th2.common.schema.message.MessageListener;
 import com.exactpro.th2.common.schema.message.MessageRouter;
 import lombok.extern.slf4j.Slf4j;
@@ -27,28 +25,41 @@ import lombok.extern.slf4j.Slf4j;
  */
 
 @Slf4j
-public class RawMessageListener implements MessageListener<RawMessageBatch> {
+public class MessageGroupBatchListener implements MessageListener<MessageGroupBatch> {
 
-    private MessageRouter<MessageBatch> batchMessageRouter;
+    private MessageRouter<MessageGroupBatch> batchGroupRouter;
     private FixDecoder fixDecoder;
 
-    public RawMessageListener (MessageRouter<MessageBatch> batchMessageRouter, FixDecoder fixDecoder) {
-        this.batchMessageRouter = batchMessageRouter;
+    public MessageGroupBatchListener(MessageRouter<MessageGroupBatch> batchGroupRouter, FixDecoder fixDecoder) {
+        this.batchGroupRouter = batchGroupRouter;
         this.fixDecoder = fixDecoder;
     }
 
     @Override
-    public void handler(String consumerTag, RawMessageBatch message) {
+    public void handler(String consumerTag, MessageGroupBatch message) {
+
+        MessageGroupBatch.Builder outputBatchBuilder = MessageGroupBatch.newBuilder();
+
+        if (message.getGroupsCount() != 1) {
+            log.error("Received batch has more than one group!, router will not send anything!");
+            return;
+        }
 
         try {
-            MessageBatch messageBatch = fixDecoder.decode(message);
+            MessageGroup messageGroup = fixDecoder.decode(message.getGroups(0));
 
-            if (messageBatch.getMessagesCount() == 0) {
-                log.info("Valid messages weren't found in this batch, router won't send anything");
+
+            if (messageGroup == null) {
+                log.info("Exception happened during decoding, router won't send anything");
                 return;
             }
 
-            batchMessageRouter.sendAll(messageBatch);
+            if (messageGroup.getMessagesCount() == 0) {
+                log.info("Messages weren't found in this batch, router won't send anything");
+                return;
+            }
+
+            batchGroupRouter.sendAll(outputBatchBuilder.addGroups(messageGroup).build());
         } catch (Exception e) {
             log.error("Exception sending message(s)", e);
         }

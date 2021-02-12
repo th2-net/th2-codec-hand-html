@@ -1,13 +1,8 @@
 package com.exactpro.th2.codec.handhtml.decoder;
 
 import com.exactpro.th2.codec.handhtml.processor.FixProcessor;
-import com.exactpro.th2.common.grpc.Message;
-import com.exactpro.th2.common.grpc.MessageBatch;
-import com.exactpro.th2.common.grpc.RawMessageBatch;
+import com.exactpro.th2.common.grpc.*;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @Slf4j
 public class FixDecoder {
@@ -18,19 +13,24 @@ public class FixDecoder {
         this.fixProcessor = fixProcessor;
     }
 
-    public MessageBatch decode (RawMessageBatch rawMessageBatch) {
-        List<Message> decodedMessages = new ArrayList<>();
+    public MessageGroup decode (MessageGroup group) {
+        MessageGroup.Builder messageGroupBuilder = MessageGroup.newBuilder();
 
-        for (var msg : rawMessageBatch.getMessagesList()) {
+        for (var msg : group.getMessagesList()) {
             try {
-                Message m = fixProcessor.process(msg);
-                decodedMessages.add(m);
+                if (msg.hasMessage()) {
+                    messageGroupBuilder.addMessages(AnyMessage.newBuilder().setMessage(msg.getMessage()).build());
+                }
+                Message m = fixProcessor.process(msg.getRawMessage());
+                messageGroupBuilder.addMessages(AnyMessage.newBuilder().setMessage(m).build());
             } catch (Exception e) {
                 log.error("Exception decoding message", e);
+
+                return null;
             }
         }
 
         log.info("Finished decoding RawMessages");
-        return MessageBatch.newBuilder().addAllMessages(decodedMessages).build();
+        return messageGroupBuilder.build();
     }
 }

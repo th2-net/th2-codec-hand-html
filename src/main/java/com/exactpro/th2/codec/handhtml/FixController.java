@@ -14,7 +14,7 @@
 package com.exactpro.th2.codec.handhtml;
 
 import com.exactpro.th2.codec.handhtml.decoder.FixDecoder;
-import com.exactpro.th2.codec.handhtml.listener.RawMessageListener;
+import com.exactpro.th2.codec.handhtml.listener.MessageGroupBatchListener;
 import com.exactpro.th2.common.schema.factory.CommonFactory;
 import com.exactpro.th2.codec.handhtml.processor.FixHtmlProcessorConfiguration;
 import com.exactpro.th2.codec.handhtml.processor.FixProcessor;
@@ -44,10 +44,10 @@ public class FixController {
             CommonFactory factory = CommonFactory.createFromArguments();
             resources.add(factory);
 
-            var parsedBatchRouter = factory.getMessageRouterParsedBatch();
+            var parsedBatchRouter = factory.getMessageRouterMessageGroupBatch();
             resources.add(parsedBatchRouter);
 
-            var rawBatchRouter = factory.getMessageRouterRawBatch();
+            var rawBatchRouter = factory.getMessageRouterMessageGroupBatch();
             resources.add(rawBatchRouter);
 
             configureShutdownHook(lock, condition);
@@ -57,8 +57,8 @@ public class FixController {
             FixProcessor fixProcessor = new FixProcessor(fixHtmlProcessorConfiguration);
 
             FixDecoder fixDecoder = new FixDecoder(fixProcessor);
-            RawMessageListener rawMessageListener = new RawMessageListener(parsedBatchRouter, fixDecoder);
-            rawBatchRouter.subscribeAll(rawMessageListener);
+            MessageGroupBatchListener messageGroupBatchListener = new MessageGroupBatchListener(parsedBatchRouter, fixDecoder);
+            rawBatchRouter.subscribeAll(messageGroupBatchListener);
 
             awaitShutdown(lock, condition);
         } catch (InterruptedException e) {
