@@ -12,7 +12,7 @@
  */
 package com.exactpro.th2.codec.handhtml.processor;
 
-import com.exactpro.th2.common.schema.message.configuration.Configuration;
+import com.exactpro.th2.common.schema.configuration.Configuration;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -23,7 +23,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class FixHtmlProcessorConfiguration implements Configuration {
+public class FixHtmlProcessorConfiguration extends Configuration {
     private String messageTypeElClassName = "table-header";
     private String contentKey = "Text out";
     private int hierarchyStart = 10;
