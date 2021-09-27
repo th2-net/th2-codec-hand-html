@@ -20,7 +20,6 @@ group = 'com.exactpro.th2'
 version = release_version
 
 repositories {
-    jcenter()
     maven {
         name 'Sonatype_snapshots'
         url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
